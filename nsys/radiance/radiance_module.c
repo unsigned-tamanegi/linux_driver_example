@@ -1,5 +1,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/slab.h>
+#include <asm/uaccess.h>
 #include "../../bus/omega.h"
 #include "../nsystem.h"
 
@@ -14,21 +16,73 @@ extern struct nsystem_device nsys_dev;
 #define radiance_mod_dev_dbg(fmt, arg...)	dev_dbg(&(nsys_dev.dev), fmt, ##arg)
 
 static int
-radiance_module_arrive_data_ops(void)
+radiance_module_arrive(void)
 {
 	radiance_mod_dev_dbg("arrive data.\n");
 	return 0;
 }
 
+static int
+radiance_open(struct nsystem_device* nsys_dev)
+{
+	printk("\t[from %s] open!!\n", nsys_dev->name);
+	return 0;
+}
+
+static ssize_t
+radiance_read(struct nsystem_device* nsys_dev, char* __user buf, size_t len, loff_t* off)
+{
+	char*						msg      = NULL;
+	ssize_t						ret      = 0;
+	static int					isrun    = 0;
+
+	printk("\t[from %s] read!!\n", nsys_dev->name);
+	isrun = (isrun + 1) & 0x01;
+	if(isrun) {
+		msg = kasprintf(GFP_KERNEL, "\t[from %s] read!!\n", nsys_dev->name);
+		if(msg == NULL) {
+			ret = -EIO;
+			goto out; 
+		}
+		ret = strlen(msg) + 1;
+		copy_to_user(buf, msg, min(strlen(msg) + 1, len));
+		kfree(msg);
+	}
+out :
+	return ret;
+}
+
+static ssize_t
+radiance_write(struct nsystem_device* nsys_dev, const char* __user buf, size_t len, loff_t* off)
+{
+	printk("\t[from %s] write!!\n", nsys_dev->name);
+	return len;
+}
+
+static int
+radiance_close(struct nsystem_device* nsys_dev)
+{
+	printk("\t[from %s] close!!\n", nsys_dev->name);
+	return 0;
+}
+
 struct nsystem_device nsys_dev = {
-	.name        = "radiance"
-  , .arrive_data = radiance_module_arrive_data_ops
+	.name     = "radiance"
+  , .nsys_ops = {
+		.arrive_data = radiance_module_arrive
+	}
+  , .chr_ops = {
+		.open  = radiance_open
+	  , .read  = radiance_read
+	  , .write = radiance_write
+	  , .close = radiance_close
+	}
 };
 
 static int
 radiance_module_probe(struct omega_device *omega_dev)
 {
-	return nsystem_device_register(&(omega_dev->dev), &nsys_dev);
+	return nsystem_device_register(&(omega_dev->dev), &nsys_dev, NULL);
 }
 
 static int

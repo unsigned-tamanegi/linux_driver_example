@@ -15,15 +15,17 @@ extern struct nsystem_device nsys_dev;
 #define humidity_mod_dev_dbg(fmt, arg...)	dev_dbg(&(nsys_dev.dev), fmt, ##arg)
 
 static int
-humidity_module_arrive_data_ops(void)
+humidity_module_arrive(void)
 {
 	humidity_mod_dev_dbg("data arrive!\n");
 	return 0;
 }
 
 struct nsystem_device nsys_dev = {
-	.name        = "humidity"
-  , .arrive_data = humidity_module_arrive_data_ops
+	.name     = "humidity"
+  , .nsys_ops = {
+	  .arrive_data = humidity_module_arrive
+	}
 };
 
 static int
@@ -32,7 +34,7 @@ humidity_module_probe(struct omega_device *omega_dev)
 	int			ret = 0;
 
 	nsystem_pr_debug("[humidity module] probe called.\n");
-	nsystem_device_register(&(omega_dev->dev), &nsys_dev);
+	nsystem_device_register(&(omega_dev->dev), &nsys_dev, NULL);
 	return ret;
 }
 
