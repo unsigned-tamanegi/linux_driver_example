@@ -7,6 +7,7 @@
 #include <asm/uaccess.h>
 #include "nsystem.h"
 #include "nsystem_util.h"
+#include "nsystem_sysfs.h"
 
 static void omega_bus_device_release(struct device *dev) {}
 
@@ -159,12 +160,16 @@ nsystem_device_register(struct device* parent_dev, struct nsystem_device* nsys_d
 {
 	int						ret     = 0;
 
+	// nsystemデバイスの初期化(0us：未設定)
+	nsys_dev->sampling_rate = 0;
+	nsys_dev->status        = STATUS_STOP;
+	// sysfsの作成
+	nsystem_init_sysfs(nsys_dev);
 	// classデバイス
 	nsys_dev->dev.parent  = parent_dev;
 	nsys_dev->dev.release = omega_bus_device_release;
 	nsys_dev->dev.class   = &nsystem_class; 
 	nsys_dev->dev.devt    = MKDEV(major, get_minor_no());
-
 	// /sys/classデバイス名の設定
 	dev_set_name(&(nsys_dev->dev), "%s", nsys_dev->name);
 	// classデバイスの生成

@@ -19,9 +19,17 @@ struct nsys_operations
 	int	(*arrive_data)(void);
 };
 
+enum {
+	STATUS_STOP
+  , STATUS_START
+  , STATUS_UPDATE
+};
+
 struct nsystem_device
 {
 	char*							name;
+	int								sampling_rate;
+	int								status;
 	struct device					dev;
 	struct cdev						c_dev;
 	struct nsys_operations			nsys_ops;
